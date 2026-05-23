@@ -1,0 +1,51 @@
+name: Release PhotoStudio setup installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example 1.0.2.0"
+        required: true
+        default: "1.0.2.0"
+      release_notes:
+        description: "Release notes"
+        required: false
+        default: "PhotoStudio setup installer"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout setup repository
+        uses: actions/checkout@v4
+        with:
+          path: setup-repo
+
+      - name: Checkout PhotoStudio source
+        uses: actions/checkout@v4
+        with:
+          repository: kimothink/PhotoStudio
+          path: source
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Build setup installer
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          $packageUrl = "https://github.com/kimothink/PhotoStudioUpdater/releases/download/v$version/PhotoStudio.update.zip"
+          .\source\scripts\Build-PhotoStudioRelease.ps1 -Version $version -PackageUrl $packageUrl
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: PhotoStudio setup ${{ inputs.version }}
+          body: ${{ inputs.release_notes }}
+          files: source/artifacts/installer/PhotoStudioSetup-${{ inputs.version }}.exe
