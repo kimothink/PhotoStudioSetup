@@ -39,13 +39,20 @@ jobs:
         shell: pwsh
         run: |
           $version = "${{ inputs.version }}"
-          $packageUrl = "https://github.com/kimothink/PhotoStudioUpdater/releases/download/v$version/PhotoStudio.update.zip"
+          $packageUrl = "https://media.githubusercontent.com/media/kimothink/PhotoStudioUpdater/main/PhotoStudio.update.zip"
           .\source\scripts\Build-PhotoStudioRelease.ps1 -Version $version -PackageUrl $packageUrl
 
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ inputs.version }}
-          name: PhotoStudio setup ${{ inputs.version }}
-          body: ${{ inputs.release_notes }}
-          files: source/artifacts/installer/PhotoStudioSetup-${{ inputs.version }}.exe
+      - name: Commit setup installer to repository
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          Copy-Item ".\source\artifacts\installer\PhotoStudioSetup-$version.exe" ".\setup-repo\PhotoStudioSetup-$version.exe" -Force
+          Push-Location .\setup-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git lfs install
+          git lfs track "*.exe"
+          git add .gitattributes "PhotoStudioSetup-$version.exe"
+          git commit -m "Release PhotoStudio setup $version" || Write-Host "No setup changes"
+          git push
+          Pop-Location
